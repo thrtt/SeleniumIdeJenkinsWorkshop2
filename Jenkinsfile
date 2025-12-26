@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        // Това име трябва да съвпада точно с името, което даде в Стъпка 1
+        // Увери се, че името 'dotnet-8' съвпада точно с това в Global Tool Configuration
         dotnetsdk 'dotnet-8'
     }
 
@@ -13,33 +13,29 @@ pipeline {
             }
         }
 
-        stage('Restore dependencies') {
+        stage('Restore & Build') {
             steps {
                 bat 'dotnet restore'
-            }
-        }
-
-        stage('Build project') {
-            steps {
-                bat 'dotnet build --configuration Release --no-restore'
+                bat 'dotnet build --configuration Release'
             }
         }
 
         stage('Run tests') {
             steps {
-                // Използваме конкретна директория за резултатите, за да сме сигурни къде отиват
-                bat 'dotnet test --configuration Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults'
+                // Използваме тестов логър и гарантираме създаването на директорията
+                bat 'dotnet test --configuration Release --no-build --logger "trx;LogFileName=test_results.trx" --results-directory TestResults'
             }
         }
     }
 
     post {
         always {
-            // Архивира .trx файла, за да можеш да го свалиш по-късно
-            archiveArtifacts artifacts: 'TestResults/*.trx', allowEmptyArchive: true
-            
-            // MSTest плъгинът визуализира тестовете в Jenkins (препоръчително)
-            mstest testResultsFile: 'TestResults/*.trx', keepLongStdio: true
+            // Тези стъпки трябва да са тук, за да имат достъп до файловете
+            script {
+                archiveArtifacts artifacts: '**/TestResults/*.trx', allowEmptyArchive: true
+                // Ако нямаш MSTest плъгин, закоментирай долния ред, за да не гърми
+                // mstest testResultsFile: '**/TestResults/*.trx'
+            }
         }
     }
 }
