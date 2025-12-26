@@ -1,41 +1,56 @@
 pipeline {
     agent any
 
-    tools {
-        // Увери се, че името 'dotnet-8' съвпада точно с това в Global Tool Configuration
-        dotnetsdk 'dotnet-8'
-    }
-
     stages {
+
         stage('Checkout code') {
             steps {
-                git branch: 'main', url: 'https://github.com/thrtt/SeleniumIdeJenkinsWorkshop2.git'
+                git branch: 'main', 
+                url: 'https://github.com/thrtt/SeleniumIdeJenkinsWorkshop2.git'
             }
         }
 
-        stage('Restore & Build') {
+        stage('Setup .NET') {
             steps {
-                bat 'dotnet restore'
-                bat 'dotnet build --configuration Release'
+                bat '''
+                echo Checking up .NET 8.0 SDK instalation...
+                donet --info
+                '''
+            }
+        }
+
+        stage('Restore dependencies') {
+            steps {
+                bat '''
+                echo Restoring .NET dependencies
+                dotnet restore 'SeleniumIde.sln
+                '''
+            }
+        }
+
+        stage('Build project') {
+            steps {
+                bat '''
+                echo Building the project
+                dotnet build  --configuration Release
+                '''
             }
         }
 
         stage('Run tests') {
             steps {
-                // Използваме тестов логър и гарантираме създаването на директорията
-                bat 'dotnet test --configuration Release --no-build --logger "trx;LogFileName=test_results.trx" --results-directory TestResults'
+                bat '''
+                echo Running tests
+                dotnet test SeleniumIde.sln --logger "trx;LogFileName=test_results.trx"
+                '''
             }
         }
     }
 
-    post {
-        always {
-            // Тези стъпки трябва да са тук, за да имат достъп до файловете
-            script {
-                archiveArtifacts artifacts: '**/TestResults/*.trx', allowEmptyArchive: true
-                // Ако нямаш MSTest плъгин, закоментирай долния ред, за да не гърми
-                // mstest testResultsFile: '**/TestResults/*.trx'
-            }
+    post{
+        always{
+            archiveArtifacts artifacts: '*/TestResults/*.trx', allowEmptyArchive: true
+            junit '*/TestResults/*.trx' 
         }
     }
 }
