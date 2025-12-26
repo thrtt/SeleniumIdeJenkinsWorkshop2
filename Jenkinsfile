@@ -2,44 +2,54 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout code') {
             steps {
                 git branch: 'main', url: 'https://github.com/thrtt/SeleniumIdeJenkinsWorkshop2.git'
             }
         }
 
-        stage('Verify .NET') {
+        stage('Setup .NET') {
             steps {
-                bat 'dotnet --version'
+                bat '''
+                echo Setting up .NET 8.0 SDK
+                choco install dotnet-8.0-sdk -y
+                '''
             }
         }
 
         stage('Restore dependencies') {
             steps {
-                bat 'dotnet restore SeleniumIde.sln'
+                bat '''
+                echo Restoring .NET dependencies
+                dotnet restore
+                '''
             }
         }
 
         stage('Build project') {
             steps {
-                bat 'dotnet build SeleniumIde.sln --configuration Release --no-restore'
+                bat '''
+                echo Building the project
+                dotnet build --configuration Release
+                '''
             }
         }
 
         stage('Run tests') {
             steps {
                 bat '''
-                mkdir SeleniumIDE\\TestResults || echo TestResults exists
-                dotnet test SeleniumIde.sln --configuration Release --logger "trx;LogFileName=SeleniumIDE\\TestResults\\SeleniumIde_test_results.trx" --no-build
+                echo Running tests
+                dotnet test SeleniumIde.sln --logger "trx;LogFileName=test_results.trx"
                 '''
             }
         }
     }
 
-    post {
-        always {
-            echo 'Archiving test results...'
-            junit 'SeleniumIDE/TestResults/*.trx'
+    post{
+        aways{
+            archiveArtifacts artifacts: '*/TestResults/*.trx', allowEmptyArchive: true
+            junit '*/TestResults/*.trx' 
         }
     }
 }
