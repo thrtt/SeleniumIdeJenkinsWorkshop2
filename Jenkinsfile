@@ -26,17 +26,40 @@ pipeline {
             }
         }
 
-        stage('Run tests') {
+        stage('Run tests - SeleniumIde') {
             steps {
-                bat 'dotnet test SeleniumIde.sln --logger "trx;LogFileName=test_results.trx" --no-build'
+                bat '''
+                mkdir TestResults || echo TestResults exists
+                dotnet test SeleniumIde.sln --configuration Release --logger "trx;LogFileName=TestResults\\SeleniumIde_test_results.trx" --no-build
+                '''
+            }
+        }
+
+        stage('Run tests - TestProject1') {
+            steps {
+                bat '''
+                mkdir TestProject1\\TestResults || echo TestResults exists
+                dotnet test TestProject1\\TestProject1.csproj --configuration Release --logger "trx;LogFileName=TestProject1\\TestResults\\TestProject1_test_results.trx" --no-build
+                '''
+            }
+        }
+
+        stage('Run tests - TestProject2') {
+            steps {
+                bat '''
+                mkdir TestProject2\\TestResults || echo TestResults exists
+                dotnet test TestProject2\\TestProject2.csproj --configuration Release --logger "trx;LogFileName=TestProject2\\TestResults\\TestProject2_test_results.trx" --no-build
+                '''
             }
         }
     }
 
     post {
         always {
-            // Архивиране на тестовите резултати
-            junit 'SeleniumIde/**/TestResults/*.trx'
+            echo 'Archiving test results...'
+            junit 'SeleniumIde/TestResults/*.trx'
+            junit 'TestProject1/TestResults/*.trx'
+            junit 'TestProject2/TestResults/*.trx'
         }
     }
 }
